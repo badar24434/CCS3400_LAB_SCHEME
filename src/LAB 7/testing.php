@@ -1,49 +1,35 @@
-// COMPLETE: Create Billplz bill on Forminator submit and redirect user to Billplz
+// PRODUCTION READY: Create Billplz bill on Forminator submit and redirect user to Billplz
 // Add this as a "Run snippet everywhere" snippet in Code Snippets
-// FIXED VERSION - Uses correct hook and response handling
 
-// Custom logging function that ALWAYS works
-function billplz_log($message) {
-    $log_file = WP_CONTENT_DIR . '/billplz-debug.log';
-    $timestamp = date('Y-m-d H:i:s');
-    $log_message = "[{$timestamp}] {$message}\n";
-    file_put_contents($log_file, $log_message, FILE_APPEND);
-    error_log($message); // Also use error_log as backup
+// Logging function - logs errors and important events only
+function billplz_log($message, $level = 'info') {
+    // Only log errors and critical events in production
+    if ($level === 'error' || $level === 'critical') {
+        $log_file = WP_CONTENT_DIR . '/billplz-errors.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $log_message = "[{$timestamp}] [{$level}] {$message}\n";
+        file_put_contents($log_file, $log_message, FILE_APPEND);
+        error_log("[Billplz {$level}] {$message}");
+    }
 }
-
-// TEST: Log immediately when this file loads
-billplz_log("========== BILLPLZ CODE LOADED ==========");
-billplz_log("WordPress is loading this code file");
-billplz_log("Waiting for form submissions...");
 
 // Hook into form submission - try multiple hooks to ensure we catch it
 add_action( 'wp_ajax_forminator_submit_form_custom-forms', 'billplz_intercept_form_submit', 1 );
 add_action( 'wp_ajax_nopriv_forminator_submit_form_custom-forms', 'billplz_intercept_form_submit', 1 );
 
 function billplz_intercept_form_submit() {
-    billplz_log("========== AJAX FORMINATOR SUBMIT INTERCEPTED ==========");
-    billplz_log("POST data: " . print_r($_POST, true));
-    
     // Check if this is our target form
     $form_id = isset($_POST['form_id']) ? intval($_POST['form_id']) : 0;
     
     if ($form_id !== 4596) {
-        billplz_log("Not our target form, continuing normal processing");
-        return; // Let Forminator handle it
+        return; // Let Forminator handle other forms
     }
     
-    billplz_log("✅ Target form detected - creating Billplz bill");
-    
-    // Create a fake entry object for our function
-    $entry = new stdClass();
-    
     // Create bill and get URL
+    $entry = new stdClass();
     $bill_url = billplz_create_bill_and_get_url($entry, $form_id);
     
     if (!empty($bill_url)) {
-        billplz_log("---------- 🚀 SENDING REDIRECT RESPONSE ----------");
-        billplz_log("Redirect URL: " . $bill_url);
-        
         // Send JSON response telling Forminator to redirect
         wp_send_json_success(array(
             'success' => true,
@@ -52,65 +38,71 @@ function billplz_intercept_form_submit() {
             'redirect' => $bill_url,
             'behavior' => 'redirect'
         ));
+    } else {
+        billplz_log('Failed to create Billplz bill for form ' . $form_id, 'error');
+        wp_send_json_error(array(
+            'message' => 'Payment setup failed. Please try again or contact support.'
+        ));
     }
 }
 
-// Also try the response filter as backup
+// Backup filter hook in case AJAX hook doesn't fire
 add_filter( 'forminator_custom_form_submit_response', function( $response, $form_id, $entry ) {
-    billplz_log("========== HOOK: forminator_custom_form_submit_response ==========");
-    billplz_log("Form ID: " . $form_id);
+    if ($form_id !== 4596) {
+        return $response;
+    }
     
-    // Run Billplz creation and modify response
     $bill_url = billplz_create_bill_and_get_url($entry, $form_id);
     
     if (!empty($bill_url)) {
-        // Modify response to redirect to Billplz
         $response['success'] = true;
         $response['message'] = 'Redirecting to payment...';
         $response['url'] = $bill_url;
         $response['redirect'] = $bill_url;
         $response['behavior'] = 'redirect';
-        billplz_log("Response modified to redirect to: " . $bill_url);
     }
     
     return $response;
 }, 999, 3 );
 
-// Main Billplz creation function - now returns URL instead of redirecting
+// Main Billplz creation function
 function billplz_create_bill_and_get_url($entry, $form_id) {
-    // --- CONFIG: change these to your values ---
-    $TARGET_FORM_ID         = 4596;    // integer
-    $FIELD_SLUG_REGID       = 'name-2';
-    $FIELD_SLUG_NAME        = 'name-1';
-    $FIELD_SLUG_EMAIL       = 'email-1';
-    $FIELD_SLUG_CATEGORY    = 'radio-1';
-    $FIELD_SLUG_AMOUNT      = 'calculation-1';
-    $BILLPLZ_SECRET_KEY     = '9319e3ea-2a49-4a9e-a167-f9164bae1a57';
-    $COLLECTION_ID          = 'g99mu2rk';
-    $REDIRECT_URL_BASE      = home_url('/payment-success');
-    $REDIRECT_URL_FAILED    = home_url('/payment-failed');  // Add failed payment page
-    $CALLBACK_ENDPOINT      = home_url('/wp-json/billplz/v1/callback');
-    $ADMIN_NOTIFICATION_TO  = 'admin@example.com';
-    // --- end CONFIG ---
-
-    billplz_log("========== BILLPLZ CREATION STARTED ==========");
-    billplz_log("Form ID submitted: " . $form_id);
-    billplz_log("Target Form ID: " . $TARGET_FORM_ID);
+    // ========== PRODUCTION CONFIG - UPDATE THESE VALUES ==========
+    $TARGET_FORM_ID         = 4596;    // Your Forminator form ID
+    $FIELD_SLUG_REGID       = 'name-2';  // Registration ID field
+    $FIELD_SLUG_NAME        = 'name-1';  // Full name field
+    $FIELD_SLUG_EMAIL       = 'email-1'; // Email field
+    $FIELD_SLUG_PHONE       = 'phone-1'; // Phone field
+    $FIELD_SLUG_CATEGORY    = 'radio-1'; // Category/participant type field
     
+    // !!! CHANGE THESE TO YOUR PRODUCTION VALUES !!!
+    $BILLPLZ_SECRET_KEY     = 'YOUR_PRODUCTION_SECRET_KEY_HERE';  // Get from Billplz dashboard
+    $COLLECTION_ID          = 'YOUR_PRODUCTION_COLLECTION_ID';    // Get from Billplz dashboard
+    $ADMIN_NOTIFICATION_TO  = 'your-email@mapps.org.my';         // Your admin email
+    
+    $REDIRECT_URL_BASE      = home_url('/payment-success');
+    $REDIRECT_URL_FAILED    = home_url('/payment-failed');
+    $CALLBACK_ENDPOINT      = home_url('/wp-json/billplz/v1/callback');
+    // ========== END CONFIG ==========
+
     // Only run for the target form
     if ( intval( $form_id ) !== intval( $TARGET_FORM_ID ) ) {
-        billplz_log("❌ Form ID mismatch - skipping");
         return null;
     }
 
-    billplz_log("✅ Form ID matched - proceeding with Billplz creation");
-    billplz_log("Entry structure: " . print_r($entry, true));
-
-    // Extract field values from POST data (since $entry might be different structure)
-    $reg_id    = isset($_POST['name-2']) ? sanitize_text_field($_POST['name-2']) : '';
-    $fullname  = isset($_POST['name-1']) ? sanitize_text_field($_POST['name-1']) : '';
-    $email     = isset($_POST['email-1']) ? sanitize_email($_POST['email-1']) : '';
-    $category  = isset($_POST['radio-1']) ? sanitize_text_field($_POST['radio-1']) : '';
+    // Extract field values from POST data
+    $reg_id    = isset($_POST[$FIELD_SLUG_REGID]) ? sanitize_text_field($_POST[$FIELD_SLUG_REGID]) : '';
+    $fullname  = isset($_POST[$FIELD_SLUG_NAME]) ? sanitize_text_field($_POST[$FIELD_SLUG_NAME]) : '';
+    $email     = isset($_POST[$FIELD_SLUG_EMAIL]) ? sanitize_email($_POST[$FIELD_SLUG_EMAIL]) : '';
+    $mobile    = isset($_POST[$FIELD_SLUG_PHONE]) ? sanitize_text_field($_POST[$FIELD_SLUG_PHONE]) : '';
+    $category  = isset($_POST[$FIELD_SLUG_CATEGORY]) ? sanitize_text_field($_POST[$FIELD_SLUG_CATEGORY]) : '';
+    
+    // Check for duplicate registration ID
+    $existing_bills = get_option('billplz_registration_ids', array());
+    if (in_array($reg_id, $existing_bills)) {
+        billplz_log("Duplicate registration ID attempted: {$reg_id}", 'error');
+        return null; // Prevent duplicate registrations
+    }
     
     // Calculate amount based on category - UPDATE THESE TO MATCH YOUR ACTUAL PRICES
     $amount = 0;
@@ -128,20 +120,11 @@ function billplz_create_bill_and_get_url($entry, $form_id) {
         $amount = 850; // RM 70 per person for Associates Members
     }
 
-    billplz_log("---------- EXTRACTED FIELD VALUES ----------");
-    billplz_log("Registration ID: '" . $reg_id . "'");
-    billplz_log("Name: '" . $fullname . "'");
-    billplz_log("Email: '" . $email . "'");
-    billplz_log("Category: '" . $category . "'");
-    billplz_log("Amount: " . $amount);
-
     // Validation
     if ( empty($reg_id) || empty($fullname) || empty($email) || $amount <= 0 ) {
-        billplz_log("---------- ❌ VALIDATION FAILED ----------");
+        billplz_log("Validation failed for registration: {$reg_id}", 'error');
         return null;
     }
-
-    billplz_log("✅ Validation passed");
 
     // Billplz expects amount in sen (cents)
     $amount_cents = intval( round( $amount * 100 ) );
@@ -150,6 +133,7 @@ function billplz_create_bill_and_get_url($entry, $form_id) {
     $payload = array(
         'collection_id'     => $COLLECTION_ID,
         'email'             => $email,
+        'mobile'            => $mobile,  // Add mobile number
         'name'              => $fullname . ' [' . $reg_id . ']',  // Add Registration ID to name for visibility
         'amount'            => $amount_cents,
         'callback_url'      => $CALLBACK_ENDPOINT,
@@ -175,10 +159,8 @@ function billplz_create_bill_and_get_url($entry, $form_id) {
         'reference_2'       => $category,
     );
 
-    billplz_log("---------- BILLPLZ API REQUEST ----------");
-    billplz_log("Posting to: https://www.billplz-sandbox.com/api/v3/bills");
-
-    $response_api = wp_remote_post( 'https://www.billplz-sandbox.com/api/v3/bills', array(
+    // !!! PRODUCTION: Using LIVE Billplz API !!!
+    $response_api = wp_remote_post( 'https://www.billplz.com/api/v3/bills', array(
         'method'      => 'POST',
         'timeout'     => 30,
         'headers'     => array(
@@ -188,37 +170,28 @@ function billplz_create_bill_and_get_url($entry, $form_id) {
     ) );
 
     if ( is_wp_error( $response_api ) ) {
-        billplz_log("---------- ❌ WP_ERROR OCCURRED ----------");
-        billplz_log('Error: ' . $response_api->get_error_message());
+        billplz_log('Billplz API error for ' . $reg_id . ': ' . $response_api->get_error_message(), 'error');
         return null;
     }
 
     $http_code = wp_remote_retrieve_response_code( $response_api );
     $body = wp_remote_retrieve_body( $response_api );
-    
-    billplz_log("---------- BILLPLZ API RESPONSE ----------");
-    billplz_log("HTTP Status Code: " . $http_code);
-    billplz_log("Response Body: " . $body);
-
     $json = json_decode( $body, true );
 
     if ( empty( $json ) || ! isset( $json['id'] ) || ! isset( $json['url'] ) ) {
-        billplz_log("---------- ❌ UNEXPECTED RESPONSE ----------");
+        billplz_log("Billplz unexpected response for {$reg_id}. HTTP: {$http_code}", 'error');
         return null;
     }
 
     $bill_id  = sanitize_text_field( $json['id'] );
     $bill_url = esc_url_raw( $json['url'] );
 
-    billplz_log("---------- ✅ BILL CREATED SUCCESSFULLY ----------");
-    billplz_log("Bill ID: " . $bill_id);
-    billplz_log("Bill URL: " . $bill_url);
-
-    // Save mapping
+    // Save bill mapping
     $map = array(
         'form_id'   => intval( $form_id ),
         'reg_id'    => $reg_id,
         'email'     => $email,
+        'mobile'    => $mobile,
         'name'      => $fullname,
         'category'  => $category,
         'amount'    => $amount,
@@ -228,10 +201,11 @@ function billplz_create_bill_and_get_url($entry, $form_id) {
         'status'    => 'pending'
     );
     update_option( 'billplz_bill_to_entry_' . $bill_id, $map, false );
+    
+    // Track registration ID to prevent duplicates
+    $existing_bills[] = $reg_id;
+    update_option('billplz_registration_ids', $existing_bills, false);
 
-    // Return the bill URL so Forminator can redirect
-    billplz_log("---------- ✅ RETURNING BILL URL ----------");
-    billplz_log("Bill URL will be used for redirect: " . $bill_url);
     return $bill_url;
 }
 
@@ -444,8 +418,8 @@ add_action( 'rest_api_init', function () {
 } );
 
 function handle_billplz_callback( WP_REST_Request $request ) {
-    // CONFIG - paste your X signature key here
-    $X_SIGNATURE_KEY = '501749b139166c8eff5bd35456345cf5375b9194144dfe543053bdc84981838cdf41cac82db0c23f2aef06a9b0d00d728fb771419489b3d902077c53f1853b6a'; // replace
+    // !!! CHANGE THIS TO YOUR PRODUCTION X-SIGNATURE KEY !!!
+    $X_SIGNATURE_KEY = 'YOUR_PRODUCTION_X_SIGNATURE_KEY_HERE'; // Get from Billplz dashboard
 
     // Read raw body
     $raw_body = $request->get_body();
@@ -559,12 +533,12 @@ add_action( 'template_redirect', function() {
         exit;
     }
 
-    // CONFIG: paste your secret key here
-    $BILLPLZ_SECRET_KEY = '9319e3ea-2a49-4a9e-a167-f9164bae1a57'; // replace
+    // !!! MUST MATCH THE SECRET KEY IN CONFIG ABOVE !!!
+    $BILLPLZ_SECRET_KEY = 'YOUR_PRODUCTION_SECRET_KEY_HERE'; // Same as above
     $opt_name = 'billplz_bill_to_entry_' . $bill_id;
     $map = get_option( $opt_name, false );
 
-    // If we don't have mapping, we still can query Billplz to check status
+    // Query Billplz to verify payment status (PRODUCTION API)
     $url = 'https://www.billplz.com/api/v3/bills/' . rawurlencode( $bill_id );
 
     $response = wp_remote_get( $url, array(

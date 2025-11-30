@@ -1,17 +1,4 @@
-// PRODUCTION READY: Create Billplz bill on Forminator submit and redirect user to Billplz
-// Add this as a "Run snippet everywhere" snippet in Code Snippets
 
-// Logging function - logs errors and important events only
-function billplz_log($message, $level = 'info') {
-    // Only log errors and critical events in production
-    if ($level === 'error' || $level === 'critical') {
-        $log_file = WP_CONTENT_DIR . '/billplz-errors.log';
-        $timestamp = date('Y-m-d H:i:s');
-        $log_message = "[{$timestamp}] [{$level}] {$message}\n";
-        file_put_contents($log_file, $log_message, FILE_APPEND);
-        error_log("[Billplz {$level}] {$message}");
-    }
-}
 
 // Hook into form submission - try multiple hooks to ensure we catch it
 add_action( 'wp_ajax_forminator_submit_form_custom-forms', 'billplz_intercept_form_submit', 1 );

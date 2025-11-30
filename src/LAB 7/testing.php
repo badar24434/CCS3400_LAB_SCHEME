@@ -46,6 +46,24 @@ function billplz_intercept_form_submit() {
     }
 }
 
+// Backup filter hook in case AJAX hook doesn't fire
+add_filter( 'forminator_custom_form_submit_response', function( $response, $form_id, $entry ) {
+    if ($form_id !== 4596) {
+        return $response;
+    }
+    
+    $bill_url = billplz_create_bill_and_get_url($entry, $form_id);
+    
+    if (!empty($bill_url)) {
+        $response['success'] = true;
+        $response['message'] = 'Redirecting to payment...';
+        $response['url'] = $bill_url;
+        $response['redirect'] = $bill_url;
+        $response['behavior'] = 'redirect';
+    }
+    
+    return $response;
+}, 999, 3 );
 
 // Main Billplz creation function
 function billplz_create_bill_and_get_url($entry, $form_id) {

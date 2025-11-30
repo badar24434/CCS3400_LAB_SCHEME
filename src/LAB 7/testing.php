@@ -13,38 +13,6 @@ function billplz_log($message, $level = 'info') {
     }
 }
 
-// Hook into form submission - try multiple hooks to ensure we catch it
-add_action( 'wp_ajax_forminator_submit_form_custom-forms', 'billplz_intercept_form_submit', 1 );
-add_action( 'wp_ajax_nopriv_forminator_submit_form_custom-forms', 'billplz_intercept_form_submit', 1 );
-
-function billplz_intercept_form_submit() {
-    // Check if this is our target form
-    $form_id = isset($_POST['form_id']) ? intval($_POST['form_id']) : 0;
-    
-    if ($form_id !== 4596) {
-        return; // Let Forminator handle other forms
-    }
-    
-    // Create bill and get URL
-    $entry = new stdClass();
-    $bill_url = billplz_create_bill_and_get_url($entry, $form_id);
-    
-    if (!empty($bill_url)) {
-        // Send JSON response telling Forminator to redirect
-        wp_send_json_success(array(
-            'success' => true,
-            'message' => 'Redirecting to payment...',
-            'url' => $bill_url,
-            'redirect' => $bill_url,
-            'behavior' => 'redirect'
-        ));
-    } else {
-        billplz_log('Failed to create Billplz bill for form ' . $form_id, 'error');
-        wp_send_json_error(array(
-            'message' => 'Payment setup failed. Please try again or contact support.'
-        ));
-    }
-}
 
 // Backup filter hook in case AJAX hook doesn't fire
 add_filter( 'forminator_custom_form_submit_response', function( $response, $form_id, $entry ) {

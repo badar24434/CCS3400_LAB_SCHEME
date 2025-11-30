@@ -65,30 +65,6 @@ add_filter( 'forminator_custom_form_submit_response', function( $response, $form
     return $response;
 }, 999, 3 );
 
-// Main Billplz creation function
-function billplz_create_bill_and_get_url($entry, $form_id) {
-    // ========== PRODUCTION CONFIG - UPDATE THESE VALUES ==========
-    $TARGET_FORM_ID         = 4596;    // Your Forminator form ID
-    $FIELD_SLUG_REGID       = 'name-2';  // Registration ID field
-    $FIELD_SLUG_NAME        = 'name-1';  // Full name field
-    $FIELD_SLUG_EMAIL       = 'email-1'; // Email field
-    $FIELD_SLUG_PHONE       = 'phone-1'; // Phone field
-    $FIELD_SLUG_CATEGORY    = 'radio-1'; // Category/participant type field
-    
-    // !!! CHANGE THESE TO YOUR PRODUCTION VALUES !!!
-    $BILLPLZ_SECRET_KEY     = 'YOUR_PRODUCTION_SECRET_KEY_HERE';  // Get from Billplz dashboard
-    $COLLECTION_ID          = 'YOUR_PRODUCTION_COLLECTION_ID';    // Get from Billplz dashboard
-    $ADMIN_NOTIFICATION_TO  = 'your-email@mapps.org.my';         // Your admin email
-    
-    $REDIRECT_URL_BASE      = home_url('/payment-success');
-    $REDIRECT_URL_FAILED    = home_url('/payment-failed');
-    $CALLBACK_ENDPOINT      = home_url('/wp-json/billplz/v1/callback');
-    // ========== END CONFIG ==========
-
-    // Only run for the target form
-    if ( intval( $form_id ) !== intval( $TARGET_FORM_ID ) ) {
-        return null;
-    }
 
     // Extract field values from POST data
     $reg_id    = isset($_POST[$FIELD_SLUG_REGID]) ? sanitize_text_field($_POST[$FIELD_SLUG_REGID]) : '';

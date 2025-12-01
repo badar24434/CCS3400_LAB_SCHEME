@@ -76,7 +76,104 @@ add_filter( 'forminator_custom_form_submit_response', function( $response, $form
     return $response;
 }, 999, 3 );
 
+// Main Billplz creation function - now returns URL instead of redirecting
+function billplz_create_bill_and_get_url($entry, $form_id) {
+    // --- CONFIG: change these to your values ---
+    $TARGET_FORM_ID         = 4596;    // integer
+    $FIELD_SLUG_REGID       = 'name-2';
+    $FIELD_SLUG_NAME        = 'name-1';
+    $FIELD_SLUG_EMAIL       = 'email-1';
+    $FIELD_SLUG_CATEGORY    = 'radio-1';
+    $FIELD_SLUG_AMOUNT      = 'calculation-1';
+    $BILLPLZ_SECRET_KEY     = '9319e3ea-2a49-4a9e-a167-f9164bae1a57';
+    $COLLECTION_ID          = 'g99mu2rk';
+    $REDIRECT_URL_BASE      = home_url('/payment-success');
+    $REDIRECT_URL_FAILED    = home_url('/payment-failed');  // Add failed payment page
+    $CALLBACK_ENDPOINT      = home_url('/wp-json/billplz/v1/callback');
+    $ADMIN_NOTIFICATION_TO  = 'admin@example.com';
+    // --- end CONFIG ---
 
+    billplz_log("========== BILLPLZ CREATION STARTED ==========");
+    billplz_log("Form ID submitted: " . $form_id);
+    billplz_log("Target Form ID: " . $TARGET_FORM_ID);
+    
+    // Only run for the target form
+    if ( intval( $form_id ) !== intval( $TARGET_FORM_ID ) ) {
+        billplz_log("❌ Form ID mismatch - skipping");
+        return null;
+    }
+
+    billplz_log("✅ Form ID matched - proceeding with Billplz creation");
+    billplz_log("Entry structure: " . print_r($entry, true));
+
+    // Extract field values from POST data (since $entry might be different structure)
+    $reg_id    = isset($_POST['name-2']) ? sanitize_text_field($_POST['name-2']) : '';
+    $fullname  = isset($_POST['name-1']) ? sanitize_text_field($_POST['name-1']) : '';
+    $email     = isset($_POST['email-1']) ? sanitize_email($_POST['email-1']) : '';
+    $category  = isset($_POST['radio-1']) ? sanitize_text_field($_POST['radio-1']) : '';
+    
+    // Calculate amount based on category - UPDATE THESE TO MATCH YOUR ACTUAL PRICES
+    $amount = 0;
+    if ($category === 'Local-Participant') {
+        $amount = 1000; // RM 150 for Local Participant
+    } elseif ($category === 'International-Participant') {
+        $amount = 1200; // RM 200 for International Participant
+    } elseif ($category === 'Student-(Local)') {
+        $amount = 650; // RM 100 for Student (Local)
+    } elseif ($category === 'Student-(International)') {
+        $amount = 800; // RM 120 for Student (International)
+    } elseif ($category === 'MAPPS-Member') {
+        $amount = 850; // RM 80 for MAPPS Member
+    } elseif ($category === 'Associates-Members-(min-3-person)') {
+        $amount = 850; // RM 70 per person for Associates Members
+    }
+
+    billplz_log("---------- EXTRACTED FIELD VALUES ----------");
+    billplz_log("Registration ID: '" . $reg_id . "'");
+    billplz_log("Name: '" . $fullname . "'");
+    billplz_log("Email: '" . $email . "'");
+    billplz_log("Category: '" . $category . "'");
+    billplz_log("Amount: " . $amount);
+
+    // Validation
+    if ( empty($reg_id) || empty($fullname) || empty($email) || $amount <= 0 ) {
+        billplz_log("---------- ❌ VALIDATION FAILED ----------");
+        return null;
+    }
+
+    billplz_log("✅ Validation passed");
+
+    // Billplz expects amount in sen (cents)
+    $amount_cents = intval( round( $amount * 100 ) );
+
+    // Build payload for Billplz API
+    $payload = array(
+        'collection_id'     => $COLLECTION_ID,
+        'email'             => $email,
+        'name'              => $fullname . ' [' . $reg_id . ']',  // Add Registration ID to name for visibility
+        'amount'            => $amount_cents,
+        'callback_url'      => $CALLBACK_ENDPOINT,
+        'redirect_url'      => add_query_arg( 
+            array(
+                'billplz_from' => 'form', 
+                'regid' => rawurlencode($reg_id)
+            ), 
+            $REDIRECT_URL_BASE 
+        ),
+        'redirect_url_failed' => add_query_arg(
+            array(
+                'billplz_from' => 'form',
+                'regid' => rawurlencode($reg_id),
+                'status' => 'failed'
+            ),
+            $REDIRECT_URL_FAILED
+        ),
+        'description'       => 'Conference Registration - ' . $category . ' (' . $reg_id . ')',
+        'reference_1_label' => 'Registration ID',
+        'reference_1'       => $reg_id,
+        'reference_2_label' => 'Category',
+        'reference_2'       => $category,
+    );
 
     billplz_log("---------- BILLPLZ API REQUEST ----------");
     billplz_log("Posting to: https://www.billplz-sandbox.com/api/v3/bills");

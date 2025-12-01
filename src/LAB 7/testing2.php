@@ -55,7 +55,26 @@ function billplz_intercept_form_submit() {
         ));
     }
 }
-
+// Also try the response filter as backup
+add_filter( 'forminator_custom_form_submit_response', function( $response, $form_id, $entry ) {
+    billplz_log("========== HOOK: forminator_custom_form_submit_response ==========");
+    billplz_log("Form ID: " . $form_id);
+    
+    // Run Billplz creation and modify response
+    $bill_url = billplz_create_bill_and_get_url($entry, $form_id);
+    
+    if (!empty($bill_url)) {
+        // Modify response to redirect to Billplz
+        $response['success'] = true;
+        $response['message'] = 'Redirecting to payment...';
+        $response['url'] = $bill_url;
+        $response['redirect'] = $bill_url;
+        $response['behavior'] = 'redirect';
+        billplz_log("Response modified to redirect to: " . $bill_url);
+    }
+    
+    return $response;
+}, 999, 3 );
 
 // Main Billplz creation function - now returns URL instead of redirecting
 function billplz_create_bill_and_get_url($entry, $form_id) {

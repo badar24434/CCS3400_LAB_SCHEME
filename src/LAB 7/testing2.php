@@ -311,7 +311,12 @@ add_filter( 'forminator_custom_form_submit_response', function( $response, $form
         return $response;
     }
 
-    
+    billplz_log("✅ Validation passed - all required fields present");
+
+    // Billplz expects amount in sen (cents)
+    $amount_cents = intval( round( $amount * 100 ) );
+    billplz_log("Amount converted to sen: " . $amount_cents . " (RM " . $amount . ")");
+
     // Build payload for Billplz API
     $payload = array(
         'collection_id'     => $COLLECTION_ID,

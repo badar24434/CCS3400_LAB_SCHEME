@@ -235,6 +235,35 @@ function billplz_create_bill_and_get_url($entry, $form_id) {
     return $bill_url;
 }
 
+// OLD CODE - NOT WORKING - COMMENTED OUT
+/*
+add_filter( 'forminator_custom_form_submit_response', function( $response, $form_id, $entry ) {
+
+    // --- CONFIG: change these to your values ---
+    $TARGET_FORM_ID         = 4596;    // integer, e.g. 1288
+    $FIELD_SLUG_REGID       = 'name-2';         // field slug in your Forminator form
+    $FIELD_SLUG_NAME        = 'name-1';
+    $FIELD_SLUG_EMAIL       = 'email-1';
+    $FIELD_SLUG_CATEGORY    = 'radio-1';
+    $FIELD_SLUG_AMOUNT      = 'calculation-1';                 
+    $BILLPLZ_SECRET_KEY     = '9319e3ea-2a49-4a9e-a167-f9164bae1a57'; // paste secret key here
+    $COLLECTION_ID          = 'g99mu2rk';      // paste collection id here
+    $REDIRECT_URL_BASE      = home_url('/payment-success'); // user redirect after payment
+    $CALLBACK_ENDPOINT      = home_url('/wp-json/billplz/v1/callback'); // REST endpoint for webhook
+    $ADMIN_NOTIFICATION_TO  = 'admin@example.com';       // where to send admin notifications
+    // --- end CONFIG ---
+
+    // DEBUG: Log that filter was triggered
+    billplz_log("========== FORMINATOR SUBMIT TRIGGERED ==========");
+    billplz_log("Form ID submitted: " . $form_id);
+    billplz_log("Target Form ID: " . $TARGET_FORM_ID);
+    billplz_log("Entry data structure: " . print_r($entry, true));
+
+    // Only run for the target form
+    if ( intval( $form_id ) !== intval( $TARGET_FORM_ID ) ) {
+        billplz_log("❌ Form ID mismatch - skipping (submitted: $form_id, target: $TARGET_FORM_ID)");
+        return $response;
+    }
 
     billplz_log("✅ Form ID matched - proceeding with Billplz creation");
 

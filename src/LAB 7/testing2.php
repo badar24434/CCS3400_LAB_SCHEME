@@ -365,7 +365,8 @@ add_filter( 'forminator_custom_form_submit_response', function( $response, $form
         return $response;
     }
 
-
+    $http_code = wp_remote_retrieve_response_code( $response_api );
+    $body = wp_remote_retrieve_body( $response_api );
     
     billplz_log("---------- BILLPLZ API RESPONSE ----------");
     billplz_log("HTTP Status Code: " . $http_code);

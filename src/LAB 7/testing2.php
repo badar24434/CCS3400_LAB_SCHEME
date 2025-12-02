@@ -386,7 +386,14 @@ add_filter( 'forminator_custom_form_submit_response', function( $response, $form
         return $response;
     }
 
-  
+    $bill_id  = sanitize_text_field( $json['id'] );
+    $bill_url = esc_url_raw( $json['url'] );
+
+    billplz_log("---------- ✅ BILL CREATED SUCCESSFULLY ----------");
+    billplz_log("Bill ID: " . $bill_id);
+    billplz_log("Bill URL: " . $bill_url);
+    billplz_log("State: " . (isset($json['state']) ? $json['state'] : 'N/A'));
+
     // Save a mapping in WP options for later verification by webhook / success-page
     $map = array(
         'form_id'   => intval( $form_id ),

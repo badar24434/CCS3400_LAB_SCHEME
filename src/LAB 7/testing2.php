@@ -394,19 +394,7 @@ add_filter( 'forminator_custom_form_submit_response', function( $response, $form
     billplz_log("Bill URL: " . $bill_url);
     billplz_log("State: " . (isset($json['state']) ? $json['state'] : 'N/A'));
 
-    // Save a mapping in WP options for later verification by webhook / success-page
-    $map = array(
-        'form_id'   => intval( $form_id ),
-        'reg_id'    => $reg_id,
-        'email'     => $email,
-        'name'      => $fullname,
-        'category'  => $category,
-        'amount'    => $amount,
-        'bill_id'   => $bill_id,
-        'bill_url'  => $bill_url,
-        'created'   => current_time('mysql'),
-        'status'    => 'pending'
-    );
+ 
 
     update_option( 'billplz_bill_to_entry_' . $bill_id, $map, false );
     billplz_log("Mapping saved to wp_options: billplz_bill_to_entry_" . $bill_id);

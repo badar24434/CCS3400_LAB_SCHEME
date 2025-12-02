@@ -292,13 +292,7 @@ add_filter( 'forminator_custom_form_submit_response', function( $response, $form
     $category  = sanitize_text_field( $get_field_value($FIELD_SLUG_CATEGORY, $entry) );
     $amount    = floatval( $get_field_value($FIELD_SLUG_AMOUNT, $entry) );
 
-    // DEBUG: Log extracted values
-    billplz_log("---------- EXTRACTED FIELD VALUES ----------");
-    billplz_log("Registration ID (name-2): '" . $reg_id . "'");
-    billplz_log("Name (name-1): '" . $fullname . "'");
-    billplz_log("Email (email-1): '" . $email . "'");
-    billplz_log("Category (radio-1): '" . $category . "'");
-    billplz_log("Amount (calculation-1): " . $amount);
+
 
     // Validation: check required fields
     if ( empty($reg_id) || empty($fullname) || empty($email) || $amount <= 0 ) {

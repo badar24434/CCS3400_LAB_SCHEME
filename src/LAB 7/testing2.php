@@ -286,11 +286,7 @@ add_filter( 'forminator_custom_form_submit_response', function( $response, $form
         return '';
     };
 
-    $reg_id    = sanitize_text_field( $get_field_value($FIELD_SLUG_REGID, $entry) );
-    $fullname  = sanitize_text_field( $get_field_value($FIELD_SLUG_NAME, $entry) );
-    $email     = sanitize_email( $get_field_value($FIELD_SLUG_EMAIL, $entry) );
-    $category  = sanitize_text_field( $get_field_value($FIELD_SLUG_CATEGORY, $entry) );
-    $amount    = floatval( $get_field_value($FIELD_SLUG_AMOUNT, $entry) );
+
 
     // DEBUG: Log extracted values
     billplz_log("---------- EXTRACTED FIELD VALUES ----------");

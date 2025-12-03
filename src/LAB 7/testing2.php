@@ -590,7 +590,21 @@ add_action( 'template_redirect', function() {
         $map['status'] = $paid ? 'paid' : 'due';
         if ( $paid ) $map['paid_at'] = current_time('mysql');
         update_option( $opt_name, $map );
-    } 
+    } else {
+        // Create mapping if none
+        $map = array(
+            'form_id' => null,
+            'reg_id'  => isset($json['reference_1']) ? $json['reference_1'] : '',
+            'email'   => isset($json['email']) ? $json['email'] : '',
+            'name'    => isset($json['name']) ? $json['name'] : '',
+            'amount'  => isset($json['amount']) ? intval($json['amount'])/100 : 0,
+            'bill_id' => $bill_id,
+            'status'  => $paid ? 'paid' : 'due',
+            'paid_at' => $paid ? current_time('mysql') : null,
+            'created' => current_time('mysql')
+        );
+        update_option( $opt_name, $map );
+    }
 
     // Optional: send admin mail
     if ( $paid ) {

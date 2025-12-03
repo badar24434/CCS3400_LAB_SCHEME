@@ -496,7 +496,19 @@ function handle_billplz_callback( WP_REST_Request $request ) {
         return new WP_REST_Response( array('status' => 'unknown_bill'), 200 );
     }
 
-   
+    // Update status and save back
+    $map['status'] = $paid ? 'paid' : 'due';
+    $map['paid_at'] = $paid ? current_time('mysql') : null;
+    update_option( $opt_name, $map );
+
+    // Notify admin (optional)
+    $admin_to = get_option('admin_email');
+    $subject = "Billplz callback: Bill {$bill_id} status updated";
+    $message = "Bill ID: {$bill_id}\nStatus: " . $map['status'] . "\nRegistration ID: " . $map['reg_id'] . "\nName: " . $map['name'] . "\n";
+    wp_mail( $admin_to, $subject, $message );
+
+    return new WP_REST_Response( array('status' => 'ok'), 200 );
+}
 
 // SNIPPET C: When user returns to /payment-success or /payment-failed
 add_action( 'template_redirect', function() {

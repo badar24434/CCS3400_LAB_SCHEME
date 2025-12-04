@@ -564,20 +564,7 @@ add_action( 'template_redirect', function() {
     $opt_name = 'billplz_bill_to_entry_' . $bill_id;
     $map = get_option( $opt_name, false );
 
-    // If we don't have mapping, we still can query Billplz to check status
-    $url = 'https://www.billplz.com/api/v3/bills/' . rawurlencode( $bill_id );
-
-    $response = wp_remote_get( $url, array(
-        'headers' => array(
-            'Authorization' => 'Basic ' . base64_encode( $BILLPLZ_SECRET_KEY . ':' )
-        ),
-        'timeout' => 20
-    ) );
-
-    if ( is_wp_error( $response ) ) {
-        // optionally show message or log
-        return;
-    }
+    
 
     $body = wp_remote_retrieve_body( $response );
     $json = json_decode( $body, true );

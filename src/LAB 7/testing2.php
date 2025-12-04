@@ -606,7 +606,19 @@ add_action( 'template_redirect', function() {
         update_option( $opt_name, $map );
     }
 
-   
+    // Optional: send admin mail
+    if ( $paid ) {
+        $admin_to = get_option('admin_email');
+        $subject = "Billplz payment successful: {$bill_id}";
+        $message = "Bill ID: {$bill_id}\nStatus: PAID\nRegistration ID: " . ($map['reg_id'] ?? '') . "\nName: " . ($map['name'] ?? '') . "\nAmount: " . ($map['amount'] ?? '') . "\n";
+        wp_mail( $admin_to, $subject, $message );
+    } elseif ( $is_failed_page ) {
+        // Send notification for failed payment
+        $admin_to = get_option('admin_email');
+        $subject = "Billplz payment failed: {$bill_id}";
+        $message = "Bill ID: {$bill_id}\nStatus: FAILED/CANCELLED\nRegistration ID: " . ($map['reg_id'] ?? '') . "\nName: " . ($map['name'] ?? '') . "\nAmount: " . ($map['amount'] ?? '') . "\n";
+        wp_mail( $admin_to, $subject, $message );
+    }
 
     // You can also set a transient or cookie to show a thank-you message on the page.
 });
